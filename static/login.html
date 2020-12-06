@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="main.css">
+    <title>User</title>
+</head>
+<body>
+   <div class="external-layout">
+    <div class="username-input" id="input">
+        <div class="text">
+            <h1>your name?</h1>
+            <p>General Chat room lobby 101</p>
+        </div>
+        <input type="text" placeholder="username" id="username">
+        <p id="error-panel"></p>
+        <button id="submitname" class="hover-button">Submit</button>
+    </div>
+   </div>
+   <div id="error-panel"></div>
+</body>
+<style>
+.username-input{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    padding: 15px;
+    line-height: 1.6;
+    background-color: white;
+    border: 1px solid black;
+}
+.text {
+    text-align: center;
+    margin-bottom: 12px;
+}
+.text p {
+    font-size: 1.1em;
+}
+.username-input h1 {
+    font-size : 1.6rem;
+    text-transform: uppercase;
+}
+.username-input #username {
+    width: 400px;
+    font-size: 1.2rem;
+    padding: 15px;
+    border-bottom: 2px solid black;
+    border-top: 0px;
+    border-left: 0px;
+    border-right: 0px;
+    margin: 0 15px;
+    border-radius: 0;
+}
+#username:focus{
+    outline: none;
+}
+button {
+    border: 0;
+    outline: 0;
+    border-radius: 10rem;
+}
+#submitname {
+    margin-top: 35px;
+    margin-bottom: 10px;
+    position: relative;
+    border-radius: 10rem;
+    padding: 12px 0;
+    color: white;
+    width: 45%;
+}
+.external-layout{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #225061;
+    height: 100vh;
+}
+</style>
+</html>
+<script src="./utils.js"></script>
+
+<script>
+    function update_userstate(value){
+        // reset the log in state
+        document.getElementById("input").innerHTML = "";
+        localStorage.setItem("user",JSON.stringify(value));
+        JSON.parse(localStorage.getItem("user"));
+    }
+    let username = "username";
+    let submit_name = document.getElementById("submitname");
+    console.log('working!');
+    // error store in stack 
+
+    let make_room_btn = built_ws_btn("submitname",username_req);
+    console.log("running!");
+    make_room_btn(`reg:register/`,username);
+
+    function username_req(req,input){
+        ws.send(`${req}${input}`);
+        ws.onmessage = (payload) => {
+            let payload_json = JSON.parse(payload.data);
+            // logging debu
+            if (detect_err(payload_json)) {
+                console.log(payload_json.error);
+                update_error(payload_json.error);
+            }else {
+                let {user_id,creation_date} = payload_json;
+                update_userstate({
+                    name:input,// username
+                    user_id,
+                    creation_date
+                });
+                window.location = "/static/rooms.html";
+                return payload_json;
+            }
+        }
+        ws.onerror = (e) => {
+            update_error(e);
+        }
+    }
+</script>

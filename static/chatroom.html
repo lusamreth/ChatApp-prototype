@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="main.css">
+    <title>Document</title>
+</head>
+<body>
+    <div class="background-wrapper">
+        <div id="participants">
+            <h1 class="label">participants : </h1>
+            <br>
+        </div>
+        <div class="message-platform">
+            <div class="banner-top">
+                <h1>Room</h1>
+            </div>
+            <div id="message-texts"></div>
+            <div class="message-input-wrapper">
+                <input type="text" placeholder="Messages" id="message-input">
+                <button id="send">send</button>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    let participants = document.getElementById("participants");
+    let msg_texts = document.getElementById("message-texts");
+    console.log(participants);
+    for(let i =0;i<30;i++) {
+        console.log("join");
+        participants.innerHTML += "<p>appo galo</p>";
+    }
+    for(let i =0;i<30;i++) {
+        msg_texts.innerHTML += "<p>appo galo</p>";
+    }
+</script>
+<style>
+body {
+    height:100vh;
+    overflow:hidden;
+}
+.background-wrapper {
+    display:grid;
+    grid-template-columns:200px 1fr;
+}     
+.message-platform,#participants{
+    padding:1.2rem;
+}
+.message-platform {
+    margin-top:20px;
+}
+#participants {
+    background-color:blue;
+}
+
+/* message stuff */
+#message-texts{
+    height:70vh;
+    overflow-y:scroll;
+    margin : 20px 0;
+}
+#message-input {
+   width:70%;
+}
+
+#message-input,#send{
+   padding:15px 20px;
+}
+.message-input-wrapper {
+    height:200px;
+}
+</style>
+</html>
+
+

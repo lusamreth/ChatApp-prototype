@@ -1,0 +1,62 @@
+* {
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; 
+   font-size: 1rem;
+   box-sizing: border-box;
+   padding: 0;
+   margin: 0;
+}
+.hover-button::after{
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    background-color: #02222E;
+    border-radius: 10rem;
+    width: 100%;
+    /* background-color: red; */
+    height: 100%;
+    top: 0;
+    outline:none;
+    z-index: -3;
+}
+.hover-button::before{
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    top: 0;
+    /* width: 100%; */
+    height: 100%;
+    width: 0%;
+    border: none;
+    outline:none;
+    /* background-color:#c06c84; */
+    background-color:#2F9599;
+    /* #355c7d */
+
+    border-radius: 10rem;
+    transition: all .3s;
+    z-index: -2;
+}
+/* .hover-button:hover + .hover-button::after{
+    width: 100%;
+} */
+.hover-button{
+    z-index: 1;
+    transition: all .3s;
+    overflow: hidden;
+
+}
+.hover-button .inner-text{
+    z-index: -1;
+    color:white;
+}
+.hover-button:hover::before{
+    width: 100%;
+    color : #02222E;
+}
+.hover-button:hover .inner-text{
+    color : #EC2049;
+}
+
+

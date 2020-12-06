@@ -1,0 +1,7 @@
+[] : build backend server 
+    [] : handle register
+    [] : handle retrieval
+    [] : handle joining in a room
+    [] : chatting interface
+    [] : Switch from mock to database
+[] : 
