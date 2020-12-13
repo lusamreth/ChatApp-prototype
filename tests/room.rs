@@ -3,7 +3,7 @@ use actix_codec::{AsyncRead, AsyncWrite, Framed};
 use actor_ws::http::io::*;
 use actor_ws::testing_tools::*;
 use awc::ws::Codec;
-use std::sync::{Mutex,Arc};
+use std::sync::{Arc, Mutex};
 trait BoogieMan {}
 // type d = Box<dyn AsyncWrite + AsyncWrite>;
 pub struct Socket<T: AsyncWrite + AsyncRead>(Framed<T, Codec>);
@@ -129,31 +129,38 @@ mod room_test {
         let mut socket = Socket(srv.ws().await.unwrap());
 
         //
-        let testing_room= create_room_test(&mut socket, "socks").await;
+        let testing_room = create_room_test(&mut socket, "socks").await;
         let _ = register(&mut socket, "Superman!".to_string()).await;
         let join_output = join_room(&mut socket, testing_room.to_string()).await;
         let retrieval = retrieve_room(&mut socket).await;
         let conn = connect(&mut socket, testing_room.to_string()).await;
 
-        assert_eq!(conn.status,"Connected");
-        assert_eq!(retrieval.id,testing_room);
-        assert_eq!(retrieval.room_name,"socks");
-        assert_eq!(join_output.status.to_lowercase(),"success");
+        assert_eq!(conn.status, "Connected");
+        assert_eq!(retrieval.id, testing_room);
+        assert_eq!(retrieval.room_name, "socks");
+        assert_eq!(join_output.status.to_lowercase(), "success");
 
         // after passing the authentication process!
         // start sending message
-        const UNITS_2000:[i32;2000] = [0;2000];
-        let sync_socket= Arc::new(Mutex::new(socket.0));
+        const UNITS_2000: [i32; 2000] = [0; 2000];
+        let sync_socket = Arc::new(Mutex::new(socket.0));
         let msg = "Mr apple pie juice 10280!";
-        stream::iter(&UNITS_2000).for_each(|_| async {
-           let _ = sync_socket.lock().unwrap().send(awc::ws::Message::Text(format!("text:{}",msg))).await;
-        }).await;
+        stream::iter(&UNITS_2000)
+            .for_each(|_| async {
+                // failed!
+                let _ = sync_socket
+                    .lock()
+                    .unwrap()
+                    .send(awc::ws::Message::Text(format!("text:{}", msg)))
+                    .await;
+            })
+            .await;
         let mut locked = sync_socket.lock().unwrap();
         while let Some(item) = locked.next().await {
             if let awc::ws::Frame::Text(chunk) = item.unwrap() {
                 let msg = String::from_utf8(chunk.to_vec()).expect("bad message!");
                 println!("msg {}", msg);
-                assert_eq!(msg,msg);
+                assert_eq!(msg, msg);
             }
         }
     }

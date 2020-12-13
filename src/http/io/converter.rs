@@ -1,7 +1,7 @@
 use super::*;
 
 // display for debugging
-impl<T: Serialize + std::fmt::Debug + Clone> std::fmt::Display for ErrRepsonse<T> {
+impl<T: Serialize + std::fmt::Debug + Clone> std::fmt::Display for ErrResponse<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

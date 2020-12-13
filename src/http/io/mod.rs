@@ -9,6 +9,13 @@ use converter::*;
 pub struct UserInput {
     pub name: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserReg {
+    pub username: String,
+    pub password: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RegistrationOutput {
     pub user_id: uuid::Uuid,
@@ -22,7 +29,7 @@ pub struct MessagePayload {
     pub date: Duration,
 }
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ErrRepsonse<T> {
+pub struct ErrResponse<T> {
     pub error_type: URI,
     pub sub_type: PARTIALURI,
     #[serde(flatten)]
@@ -39,7 +46,6 @@ pub struct ResponseFeildError {
     pub field: String,
     pub error: String,
 }
-
 impl Responsive for RegisterRes {
     fn map_err(&self) -> String {
         let mut stat = String::new();
@@ -64,7 +70,7 @@ impl Responsive for RegisterRes {
             }
             RegistrationStatus::CREATED => panic!("WRONG SEMATIC! \n Creation is not error!"),
         };
-        let result_err = ErrRepsonse {
+        let result_err = ErrResponse {
             error_type: stat,
             sub_type: payload_st.to_string(),
             details: resp_err,
@@ -132,7 +138,7 @@ impl Responsive for RoomCreation {
             }
         };
         resp.field = "Room_name".to_string();
-        let rc = ErrRepsonse {
+        let rc = ErrResponse {
             error_type: ROOM_ERROR.to_string(),
             instance: NA.to_string(),
             sub_type: status.to_string(),
@@ -205,7 +211,7 @@ impl Responsive for SignalOutput {
             _ => panic!("This is a success payload!"),
         };
 
-        let back = ErrRepsonse {
+        let back = ErrResponse {
             error_type: SIGNAL_ERROR.to_string(),
             sub_type: state_type.to_string(),
             details,
@@ -261,7 +267,7 @@ impl Responsive for JoinOutput {
             _ => panic!("Not an error payload"),
         };
 
-        let resp = ErrRepsonse {
+        let resp = ErrResponse {
             error_type: ROOMERROR.to_string(),
             sub_type: err_tp.to_string(),
             details: failing_case,
@@ -283,4 +289,10 @@ impl Responsive for JoinOutput {
             _ => panic!("Error payload!"),
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthorizationError {
+    pub status: URI,
+    pub reason: String,
 }

@@ -7,7 +7,7 @@ use uuid::Uuid;
 impl Handler<Registration> for Server {
     type Result = MessageResult<Registration>;
     fn handle(&mut self, msg: Registration, _: &mut Self::Context) -> Self::Result {
-        let result = self.handle_register(msg.username);
+        let result = self.handle_register(msg.username, msg.password);
         MessageResult(result)
     }
 }
@@ -27,11 +27,7 @@ impl Handler<CreateRoom> for Server {
         println!("{:#?}", res);
         match res.handle {
             Some(id) => {
-                self.send_message(
-                   id, 
-                    "New Room has been created!",
-                    msg.creator,
-                );
+                self.send_message(id, "New Room has been created!", msg.creator);
             }
             None => {}
         }
@@ -72,6 +68,8 @@ impl SignalController for Server {
             )),
             signaled_at: utility::timestamp_now(),
         };
+        println!("room id : {}", room_id);
+        println!("id : {}", user);
         if let Some(room) = self.rooms.read().unwrap().get(&room_id) {
             if let Some(_) = room.client_ids.iter().find(|id| user == **id) {
                 match self.clients.write() {

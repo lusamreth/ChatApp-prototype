@@ -2,17 +2,19 @@ use crate::domain::*;
 use actix::prelude::*;
 use std::collections::HashMap;
 use uuid::Uuid;
-//use env_logger
+pub mod auth;
 mod handlers;
 pub use super::domain::ClientMessage;
 use super::domain::{Client, Payload, Room, User};
 use std::sync::*;
 type Clients = Arc<RwLock<HashMap<Uuid, Client>>>;
 type Rooms = Arc<RwLock<HashMap<Uuid, Room>>>;
-
+type Users = Arc<RwLock<HashMap<Uuid, User>>>;
 // way of storing messages
 // Room : store hasmap of msgs
 // [client_id : "message"] // hashmap
+
+//export :
 
 type RoomId = Uuid;
 type UserId = Uuid;
@@ -22,6 +24,8 @@ pub struct Server {
     server_id: Uuid,
     pub clients: Clients,
     rooms: Rooms,
+    users: Users,
+    ping: usize,
 }
 
 impl Server {
@@ -30,6 +34,8 @@ impl Server {
             server_id: Uuid::new_v4(),
             clients: Arc::new(RwLock::new(HashMap::new())),
             rooms: Arc::new(RwLock::new(HashMap::new())),
+            users: Arc::new(RwLock::new(HashMap::new())),
+            ping: 0,
         };
         return ent;
     }
@@ -131,7 +137,7 @@ impl Server {
         }
     }
 
-    pub fn handle_register(&mut self, username: String) -> RegisterRes {
+    pub fn handle_register(&mut self, username: String, pwd: String) -> RegisterRes {
         let usn_field = String::from("username");
         if username.len() == 0 {
             return RegisterRes {
@@ -145,15 +151,16 @@ impl Server {
                 cl_id: None,
             };
         }
-        let new_id = Uuid::new_v4();
-        let new_cl = Client {
-            client_id: new_id.clone(),
-            address: None,
-            user: User::new(username),
-        };
         match self.clients.read() {
             Ok(handle) => {
-                if let Some(_) = handle.get(&new_id) {
+                let mut existed = false;
+                handle.iter().for_each(|(_, client)| {
+                    if &client.user.username == &username {
+                        existed = true;
+                        return;
+                    }
+                });
+                if existed == true {
                     return RegisterRes {
                         status: RegistrationStatus::FAILED(FailureReason::COLLISION),
                         cl_id: None,
@@ -168,6 +175,13 @@ impl Server {
                 };
             }
         }
+
+        let new_id = Uuid::new_v4();
+        let new_cl = Client {
+            client_id: new_id.clone(),
+            address: None,
+            user: User::new(username, pwd),
+        };
         // user name must not contain ${#,[,],?,*,/,\,','}
         // append new user
         println!("id col {}", new_id);
@@ -223,6 +237,42 @@ impl Server {
         }
         result
     }
+
+    pub fn handle_login(&self, pwd: String, username: String) -> LoginRes {
+        let mut read_err = false;
+        let mut passed: (bool, Option<Uuid>) = (false, None);
+        match self.users.read() {
+            Ok(handle) => handle.iter().for_each(|(uid, user)| {
+                if user.username == username {
+                    passed.0 = user.comp_pass(&pwd);
+                    passed.1 = Some(user.uid);
+
+                    return;
+                }
+            }),
+            Err(e) => {
+                read_err = true;
+            }
+        };
+        if read_err == true {
+            return LoginRes {
+                status: LoginStatus::Failed(LoginFailure::Internal(FailureReason::ACCESSREADERROR)),
+                cl_id: None,
+            };
+        }
+
+        if passed.0 == true {
+            return LoginRes {
+                status: LoginStatus::Passed,
+                cl_id: passed.1,
+            };
+        } else {
+            return LoginRes {
+                status: LoginStatus::Failed(LoginFailure::UserFailure),
+                cl_id: None,
+            };
+        }
+    }
 }
 
 impl Actor for Server {
@@ -275,6 +325,33 @@ impl Handler<JoinInput> for Server {
                 // return MessageResult(JoinOutput::Failed(FailureReason::COLLISION));
                 return MessageResult(JoinOutput::Rejected(RoomRejection::UnknownRoom));
             }
+        }
+    }
+}
+
+impl Handler<LoginMessage> for Server {
+    type Result = MessageResult<LoginMessage>;
+    fn handle(&mut self, msg: LoginMessage, _: &mut Self::Context) -> Self::Result {
+        MessageResult(self.handle_login(msg.username, msg.password))
+    }
+}
+
+use std::time::Duration;
+
+#[derive(Copy, Clone, Message)]
+#[rtype(result = "()")]
+pub struct PingState(pub usize);
+
+impl Handler<PingState> for Server {
+    type Result = ();
+    fn handle(&mut self, msg: PingState, ctx: &mut Self::Context) -> Self::Result {
+        self.ping += 1;
+        if self.ping > msg.0 {
+            ctx.stop();
+        } else {
+            ctx.run_interval(Duration::new(200, 0), move |_, ctx| {
+                ctx.address().do_send(msg);
+            });
         }
     }
 }

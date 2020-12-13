@@ -10,7 +10,7 @@ use crate::{backend, domain, pipe};
 use self::resources::config_server_file;
 
 async fn test_url(req: HttpRequest) -> HttpResponse {
-    dbg!("{:#?}", &req.match_info().get("socket"));
+    //dbg!("{:#?}", &req.match_info().get("socket"));
 
     HttpResponse::Ok().body("suck")
 }
@@ -29,6 +29,8 @@ pub async fn build() -> std::io::Result<()> {
             .default_service(web::route().to(|| HttpResponse::Ok()))
             //.route("/", web::get().to(resources::registration::retreive_user))
             .configure(config_server_file)
+            .wrap(backend::auth::BearerAuth)
+            .route("/regu", web::to(resources::auth_routes::register))
             .route("/ws/{socket_id}", web::to(resources::websocket::chat_route))
             .route("/test/{socket}", web::to(test_url))
     })

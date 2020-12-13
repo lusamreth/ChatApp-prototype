@@ -65,7 +65,6 @@ function verify_user(){
 // check if the user already existed in localStorage
 verify_user();
 
-
 function fetch_room(amount){
     ws.send("rooms");
     let  i = 0;
@@ -90,7 +89,7 @@ function fetch_room(amount){
                 <div class="room-info"
                     <p>members :
                     ${participants}/${capacity} 
-                    <button class="joinroom hover-button" id="join_room" data-roomid="${id}">
+                    <button class="joinroom hover-button" id="join_room-${i}]" data-roomid="${id}">
                         <p class="inner-text"'>join</p></button> 
                     </p>
                 </div>
@@ -107,6 +106,7 @@ let input_err = document.getElementById("input-error");
 // state : 1 -> second page visible
 // [-1,-2,-3,-4,-5,....]; the lesser the value
 // the further the page get!
+
 class PopBack{
     constructor(dom){
         this.element = {
@@ -173,28 +173,45 @@ tp.addEventListener("click",(e) => {
 
 function init_joinbutton(){
     // self notify function
+    
+    let reset_time = 0;
+        reset_time += 1;
     try {
-        let join_button = document.getElementById("join_room");
-        join_button.addEventListener("click", (e) => {
-            e.preventDefault();
+        let join_buttons = document.getElementsByClassName("joinroom");
+        if (join_buttons.length === 0){
+            setTimeout(() => {
+               init_joinbutton();
+            },100)
+        }else{
+            for(let i=0;i<join_buttons.length;i++){
+            let roomid = join_buttons[i].dataset.roomid;
+            console.log(roomid);
+            let req_queue = [
+                `join:join_room/${roomid}`,
+                `signal:connect/${roomid}`
+            ];
 
-            let roomid = join_button.dataset.roomid;
+            join_buttons[i].addEventListener("click", (e) => {
 
-            ws.send(`join:join_room/${roomid}`)
+                    e.preventDefault();
+                    console.log("working!");
 
-            ws.onmessage = (payload) => {
-                let err_payload = JSON.parse(payload.data);
-                if (err_payload.sub_type.toLowerCase() === "/existinguser"){
-                    console.log("user is already joined!")
-                }
-                ws.send("/signal:connect/");
+                    let results = [];
+                    if (Error === cont_req(req_queue,results)) {
+                        console.log("this res");
+                    };
+                    console.log(results);
+                });
             }
-        });
+
+        }
     }catch(e) {
-        setTimeout(() => {
-            //recall after some time!
-            init_joinbutton()
-        },50);
+        if(reset_time > 5){
+            update_error("Cannot init buttons!")
+            return;
+        }
+        console.log(e);
+        console.log(reset_time);
 
     }
 
@@ -210,6 +227,7 @@ function create_room_req(req,name){
     }
     ws.send(`${req}${name}`);
     ws.onmessage = (payload) => {
+        console.log(payload);
         let payload_json = JSON.parse(payload.data);
         // see if any error
         if (detect_err(payload_json)) {
@@ -410,6 +428,7 @@ let mega_test = (num) => {
 .wrapper {
     background-color: white;
     margin:10px 55px;
+    min-height:450px;
     max-width: 750px;
     width:90%;
     position:relative;

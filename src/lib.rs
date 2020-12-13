@@ -13,7 +13,7 @@ pub mod testing_tools {
         let len = num as usize;
         let mut res = Vec::with_capacity(len);
         for _ in 0..num {
-            let mock_usr = domain::User::new("super diteched".to_string());
+            let mock_usr = domain::User::new("super diteched".to_string(), "192739".to_string());
             res.push(domain::Client::new(mock_usr));
         }
         return res;
@@ -32,6 +32,8 @@ pub mod testing_tools {
             App::new()
                 .data(addrs.clone())
                 .route("/", web::to(http::resources::websocket::chat_route))
+                .route("/reg", web::to(http::resources::auth_routes::register))
         });
         return srv;
-    } }
+    }
+}

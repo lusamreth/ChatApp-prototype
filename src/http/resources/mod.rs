@@ -1,4 +1,5 @@
 pub use super::io;
+pub mod auth_routes;
 pub mod websocket;
 use actix_files::Files;
 use actix_web::web;

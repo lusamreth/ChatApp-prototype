@@ -59,7 +59,7 @@ impl SimpleSocket {
         field: &str,
         ws_ctx: &mut ws::WebsocketContext<Self>,
     ) {
-        let err = ErrRepsonse {
+        let err = ErrResponse {
             error_type: REGISTRATION_ERR.to_string(),
             sub_type: LENGTHLIMIT.to_string(),
             instance: NA.to_string(),
@@ -81,10 +81,19 @@ impl SimpleSocket {
         match scanner(input) {
             Some(text_input) => {
                 self.user = text_input.clone();
+                let inputs = text_input
+                    .split("/")
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>();
+                if inputs.len() != 2 {
+                    ws_ctx.text("parameters is not sufficient or bad format!");
+                    return;
+                }
                 let _ = self
                     .addr
                     .send(Registration {
-                        username: text_input.clone(),
+                        username: inputs.get(0).unwrap().clone(),
+                        password: inputs.get(1).unwrap().clone(), //pwd:
                     })
                     .into_actor(self)
                     .then(move |res, act, ws_ctx| {

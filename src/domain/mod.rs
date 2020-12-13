@@ -1,9 +1,14 @@
 use actix::{Message, Recipient};
 use std::collections::HashMap;
 //use std::sync::Arc;
+use pbkdf2;
 use serde::{Deserialize, Serialize};
+use sha2;
 use std::time::Duration;
 use uuid::Uuid;
+mod jwt;
+mod utility;
+
 //type Clients = Arc<HashMap<Uuid,client>>;
 #[derive(Debug, Clone, Message)]
 #[rtype(result = "()")]
@@ -32,18 +37,29 @@ pub struct Client {
 
 #[derive(Debug, Clone)]
 pub struct User {
-    uid: Uuid,
-    username: String,
+    pub uid: Uuid,
+    pub username: String,
     created_at: Duration,
+    // contain hash
+    pwd: String,
 }
 
 impl User {
-    pub fn new(username: String) -> Self {
+    pub fn new(username: String, pwd: String) -> Self {
+        let mut hash_buffer = [0u8; 64];
+        //pbkdf2::pbkdf2(pwd.as_bytes(), "example!!".as_bytes(), 5, &mut hash_buffer);
+        let a = pbkdf2::pbkdf2_simple(&pwd, 20).unwrap();
+        // require atleast
         User {
             username,
             uid: Uuid::new_v4(),
             created_at: utility::timestamp_now(),
+            //pwd: "a".to_string(),
+            pwd: a,
         }
+    }
+    pub fn comp_pass(&self, pass: &str) -> bool {
+        utility::compare_sha256(pass, self.pwd.as_str())
     }
 }
 
@@ -136,47 +152,13 @@ impl Iterator for RoomIter {
 
 // #[derive(Message)]
 // #[rtype(result = "Result<RegistrationStatus,()>")]
-/// Util funtions
-pub mod utility {
-    use std::time::{Duration, SystemTime, UNIX_EPOCH};
-    pub fn timestamp_now() -> Duration {
-        let sys = SystemTime::now();
-        let now = sys.duration_since(UNIX_EPOCH).expect("Time went backward!");
-        return now;
-    }
-
-    pub fn sanitize_text(text: &str) -> bool {
-        let excluded = regex::Regex::new(r"[ $ / # ? * \\ \[ \] ]").expect("bad regex!");
-        excluded.is_match(text)
-    }
-
-    pub fn build_extract_backlash(prefix: &str, len: usize) -> Box<dyn Fn(&str) -> Option<String>> {
-        let match_regex = format!(r#"({})(/)(.*)+"#, prefix);
-        let regx = regex::Regex::new(&match_regex).expect("bad regex!");
-        Box::new(move |text| {
-            println!("testxt {}", text);
-            match regx.clone().captures(text) {
-                Some(groups) => {
-                    println!("cap {:#?}", groups);
-                    let param = groups.get(3).map_or("", |m| m.as_str());
-                    if param.len() < len {
-                        Some(param.to_string())
-                    } else {
-                        None
-                    }
-                }
-                None => None,
-            }
-            // scan the param group 3
-        })
-    }
-}
 
 use derive_more::{Display, Error};
 #[derive(Message)]
 #[rtype(result = "RegisterRes")]
 pub struct Registration {
     pub username: String,
+    pub password: String,
 }
 // #[rtype(result = "(RegistrationStatus,Option<Uuid>)")]
 #[derive(Message)]
@@ -321,4 +303,23 @@ pub enum JoinOutput {
     Success,
     Rejected(RoomRejection),
     Failed(FailureReason),
+}
+pub enum LoginFailure {
+    Internal(FailureReason),
+    UserFailure,
+}
+pub enum LoginStatus {
+    Passed,
+    Failed(LoginFailure),
+}
+pub struct LoginRes {
+    pub status: LoginStatus,
+    pub cl_id: Option<Uuid>,
+}
+
+#[derive(Clone, Message)]
+#[rtype(result = "LoginRes")]
+pub struct LoginMessage {
+    pub username: String,
+    pub password: String,
 }

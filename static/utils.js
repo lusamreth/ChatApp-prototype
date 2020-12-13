@@ -60,4 +60,48 @@ function built_ws_btn(button_name,built_closure){
     }
 }
 
-
+//count start from one!;
+//let queue = [""];
+// require to use in a try catch scope
+function cont_req(queue,results){
+    if (queue.length === 0) return results;
+    ws.send(queue.pop());
+    ws.onmessage = (payload) => {
+        let payload_json = JSON.parse(payload.data);
+        if (detect_err(payload_json)){
+            console.log("there is error!");
+            throw payload_json;
+        }
+        results.push(payload_json);
+        console.log(results);
+        cont_req(queue,results);
+    }
+}
+// testing the continue request 
+// so far passed!
+function testcont(){
+    console.log("testing cont");
+    let test_queue = [
+        "room:create_room/apoa",
+        "room:create_room/dbeu",
+        "room:create_room/comal"];
+    let results = [];
+    
+    cont_req(test_queue,results);
+    console.log(results);
+}
+function dea(){
+    throw "apap";
+}
+function nua(){
+    try{
+        dea();
+    }catch(e){
+        console.log(e);
+    }
+    
+}
+function recur_push(item,array){
+   array.push(item) ;
+   recur_push(item,array);
+}
