@@ -350,6 +350,7 @@ dependencies = [
  "env_logger",
  "futures",
  "jsonwebtoken",
+ "lazy_static",
  "log",
  "pbkdf2",
  "regex",

@@ -3,6 +3,8 @@ pub mod domain;
 pub mod http;
 pub mod pipe;
 
+#[macro_use]
+extern crate lazy_static;
 pub mod testing_tools {
     pub use super::*;
     pub use actix::*;

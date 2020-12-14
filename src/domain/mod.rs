@@ -3,11 +3,10 @@ use std::collections::HashMap;
 //use std::sync::Arc;
 use pbkdf2;
 use serde::{Deserialize, Serialize};
-use sha2;
 use std::time::Duration;
 use uuid::Uuid;
 mod jwt;
-mod utility;
+pub mod utility;
 
 //type Clients = Arc<HashMap<Uuid,client>>;
 #[derive(Debug, Clone, Message)]
@@ -40,6 +39,7 @@ pub struct User {
     pub uid: Uuid,
     pub username: String,
     created_at: Duration,
+    token_version:usize,
     // contain hash
     pwd: String,
 }
@@ -55,6 +55,7 @@ impl User {
             uid: Uuid::new_v4(),
             created_at: utility::timestamp_now(),
             //pwd: "a".to_string(),
+            token_version:0,
             pwd: a,
         }
     }
