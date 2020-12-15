@@ -291,8 +291,35 @@ impl Responsive for JoinOutput {
     }
 }
 
+pub fn get_auth_error(stat: AuthStatus) -> AuthorizationError {
+    match stat {
+        AuthStatus::Success => panic!("This is not a err payload!"),
+        AuthStatus::Fail(fail) => {
+            let reason = fail.to_string();
+            let status = match fail {
+                BearerFailure::EmptyHeader => EMPTY_HEADER.to_string(),
+                BearerFailure::EmptyCookie => EMPTY_HEADER.to_string(),
+                BearerFailure::ExpiredJwt => EXPIRED_TOKEN.to_string(),
+                BearerFailure::InvalidToken => INVALIDTOKEN.to_string(),
+            };
+            AuthorizationError { status, reason }
+        }
+    }
+}
 #[derive(Debug, Serialize, Deserialize)]
-pub struct AuthorizationError {
-    pub status: URI,
-    pub reason: String,
+pub struct GeneralError {
+    pub error: String,
+}
+impl From<AuthorizationError> for ErrResponse<GeneralError> {
+    fn from(auth_err: AuthorizationError) -> Self {
+        println!("P{}", auth_err.reason);
+        ErrResponse {
+            instance: NA.to_string(),
+            sub_type: auth_err.status,
+            error_type: AUTH_ERROR.to_string(),
+            details: GeneralError {
+                error: auth_err.reason,
+            },
+        }
+    }
 }

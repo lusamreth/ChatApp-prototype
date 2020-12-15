@@ -5,7 +5,7 @@ use pbkdf2;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use uuid::Uuid;
-mod jwt;
+pub mod jwt;
 pub mod utility;
 
 //type Clients = Arc<HashMap<Uuid,client>>;
@@ -39,7 +39,7 @@ pub struct User {
     pub uid: Uuid,
     pub username: String,
     created_at: Duration,
-    token_version:usize,
+    token_version: usize,
     // contain hash
     pwd: String,
 }
@@ -55,7 +55,7 @@ impl User {
             uid: Uuid::new_v4(),
             created_at: utility::timestamp_now(),
             //pwd: "a".to_string(),
-            token_version:0,
+            token_version: 0,
             pwd: a,
         }
     }
@@ -323,4 +323,25 @@ pub struct LoginRes {
 pub struct LoginMessage {
     pub username: String,
     pub password: String,
+}
+
+#[derive(Debug, Display)]
+pub enum BearerFailure {
+    #[display(fmt = "Invalid Token input!")]
+    InvalidToken,
+    #[display(fmt = "The header is empty!")]
+    EmptyHeader,
+    #[display(fmt = "Expired jwt token!")]
+    ExpiredJwt,
+    #[display(fmt = "Missing authorizing cookie!")]
+    EmptyCookie,
+}
+pub enum AuthStatus {
+    Success,
+    Fail(BearerFailure),
+}
+
+pub struct AuthorizationError {
+    pub status: String,
+    pub reason: String,
 }

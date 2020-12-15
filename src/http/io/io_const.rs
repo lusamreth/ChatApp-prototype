@@ -23,3 +23,8 @@ pub const USER_EXISTED: &'static str = "/ExistingUser";
 pub const EXISTED_USER_MSG: &'static str = "User in the room is already Joined";
 pub const UNKOWNUSER: &'static str = "/UnknownUser";
 pub const UNKOWNROOM: &'static str = "/UnkownRoom";
+
+pub const AUTH_ERROR: &'static str = "/authorization_err";
+pub const EMPTY_HEADER: &'static str = "/EmptyHead";
+pub const INVALIDTOKEN: &'static str = "/InvalidToken";
+pub const EXPIRED_TOKEN: &'static str = "/ExpiredToken";

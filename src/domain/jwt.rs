@@ -1,10 +1,13 @@
 use super::utility;
 use jsonwebtoken::*;
-use serde::{Deserialize,Serialize};
+use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+
+pub type JwtRes<T> = Result<TokenData<TokenClaim<T>>, String>;
 // store user_id,username,date
 //
 #[derive(Serialize, Deserialize)]
-struct TokenClaim<T> {
+pub struct TokenClaim<T> {
     client_id: String,
     aud: String,
     sub: String,
@@ -12,13 +15,13 @@ struct TokenClaim<T> {
     exp: usize,
     iat: usize,
     scope: String,
-    #[serde(skip_serializing_if = "Option::is_none",)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     extension: Option<T>,
 }
 
 // use to invalidate the access_token
 #[derive(Serialize, Deserialize)]
-struct TokenVersion {
+pub struct TokenVersion {
     #[serde(default)]
     token_version: usize,
 }
@@ -57,7 +60,7 @@ impl<T> TokenClaim<T> {
     // create token claim for refresh_token
     fn refresh_token(client_id: String) -> Self {
         let iat = utility::timestamp_now().as_secs() as usize;
-        let scope = Self::create_scope(vec!["Create-Access-token","Renewal","Session"]);
+        let scope = Self::create_scope(vec!["Create-Access-token", "Renewal", "Session"]);
         TokenClaim {
             client_id,
             scope,
@@ -68,7 +71,7 @@ impl<T> TokenClaim<T> {
             exp: 60 * 15,
             //sub field- not sure about this one!!
             sub: "randomized!!".to_string(),
-            extension: None
+            extension: None,
         }
     }
 
@@ -76,6 +79,7 @@ impl<T> TokenClaim<T> {
         self.extension = Some(ext);
     }
 }
+
 lazy_static! {
     // private keys
     static ref AKEY : &'static [u8] = include_bytes!("../../access_token/private_key.pem");
@@ -103,18 +107,20 @@ impl AccessToken {
         encode(&header, &newtoken, &key).expect("Cannot encode jwt")
     }
 
-    pub fn verify(token:&str){
+    pub fn verify(token: &str) -> JwtRes<String> {
         let validation = Validation::new(Algorithm::HS384);
         let dk = DecodingKey::from_rsa_pem(&PUB_AKEY).expect("Cannot unwrap token's key");
         // String extension is just placeholder!!
-        jsonwebtoken::decode::<TokenClaim<String>>(token, &dk, &validation);
+        match jsonwebtoken::decode::<TokenClaim<String>>(token, &dk, &validation) {
+            Ok(token) => Ok(token),
+            Err(token_err) => Err(token_err.to_string()),
+        }
     }
 }
 pub struct RefreshToken;
 
 impl RefreshToken {
-
-    pub fn create_refresh_token(clid:Uuid) -> String{
+    pub fn create_refresh_token(clid: Uuid) -> String {
         let mut header = Header::new(Algorithm::HS384);
         //let id = Uuid::to_string(&clid);
         let mut newtoken = TokenClaim::<TokenVersion>::refresh_token(clid.to_string());
@@ -126,12 +132,14 @@ impl RefreshToken {
         encode(&header, &newtoken, &key).expect("Cannot encode jwt")
     }
 
-    pub fn verify(token:&str){
+    pub fn verify(token: &str, tkv: usize) -> JwtRes<TokenVersion> {
         let validation = Validation::new(Algorithm::HS384);
         let dk = DecodingKey::from_rsa_pem(&PUB_RKEY).expect("Cannot unwrap token's key");
         // String extension is just placeholder!!
-        jsonwebtoken::decode::<TokenClaim<String>>(token, &dk, &validation);
+        let token_res = jsonwebtoken::decode::<TokenClaim<TokenVersion>>(token, &dk, &validation);
+        match token_res {
+            Ok(token) => Ok(token),
+            Err(token_error) => Err(token_error.to_string()),
+        }
     }
-
-    //pub fn invalid
 }

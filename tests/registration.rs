@@ -1,7 +1,7 @@
 extern crate actor_ws;
 use actor_ws::http::io::*;
 use actor_ws::testing_tools::*;
-type RegErrorOutput = ErrRepsonse<ResponseFeildError>;
+type RegErrorOutput = ErrResponse<ResponseFeildError>;
 
 #[cfg(test)]
 mod testing_resgistration {
@@ -104,7 +104,7 @@ mod testing_resgistration {
                     println!("{:#?}", feedback);
                     let json_err_res =
                         String::from_utf8(feedback.to_vec()).expect("bad parsing error!");
-                    let val = serde_json::from_str::<ErrRepsonse<ResponseFeildError>>(
+                    let val = serde_json::from_str::<ErrResponse<ResponseFeildError>>(
                         json_err_res.as_str(),
                     )
                     .expect("Unencountered response!");

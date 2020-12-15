@@ -266,7 +266,7 @@ impl Actor for SimpleSocket {
         self.adjust_hb(ctx);
         //self.addr.send()
     }
-    fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
+    fn stopping(&mut self, _: &mut Self::Context) -> Running {
         //println!("Stopping addrs {:#?}",ctx.address());
         Running::Stop
     }

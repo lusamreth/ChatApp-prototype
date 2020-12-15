@@ -20,7 +20,6 @@ pub async fn chat_route(
             Ok(id) => uid = Some(id),
             Err(_) => {
                 error = Some("Fail to parse the given id!");
-                uid = None;
             }
         },
         None => {
