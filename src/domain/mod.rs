@@ -335,6 +335,8 @@ pub enum BearerFailure {
     ExpiredJwt,
     #[display(fmt = "Missing authorizing cookie!")]
     EmptyCookie,
+    #[display(fmt = "Error while parsing the cookie!")]
+    ParsingError,
 }
 pub enum AuthStatus {
     Success,

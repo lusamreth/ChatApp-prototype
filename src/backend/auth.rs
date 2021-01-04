@@ -1,11 +1,13 @@
 use crate::domain::*;
 use crate::http::io::*;
 use actix_service::{Service, Transform};
+// jwt from domian crate
 use actix_web::{
     dev::{HttpResponseBuilder, ServiceRequest, ServiceResponse},
     http, Error, HttpRequest, HttpResponse,
 };
 use futures::future::{ok, Ready};
+use jwt::*;
 use std::future::Future;
 
 pub struct BearerAuth;
@@ -55,7 +57,6 @@ where
         // looking for bearer key!
         //let matched = req.headers().contains_key("bearer");
         let auth_stat = process_auth_header(&req);
-        println!("asdasld");
         let fut = self.service.call(req);
         if let AuthStatus::Success = auth_stat {
             //if true {
@@ -78,46 +79,6 @@ where
     }
 }
 use std::str::FromStr;
-fn process_auth_header(req: &ServiceRequest) -> AuthStatus {
-    match req.headers().get("cookie") {
-        Some(head_val) => match head_val.to_str() {
-            Ok(long_cookie_string) => match cookie_parse(long_cookie_string) {
-                Ok(cookies) => {
-                    scan_token(cookies);
-                }
-                Err(_) => {}
-            },
-            Err(_) => {}
-        },
-        None => {} //None => AuthStatus::Fail(BearerFailure::EmptyCookie),
-    };
-    let auth_val = req.headers().get("Authorization");
-    match auth_val {
-        Some(header_val) => {
-            match header_val.to_str() {
-                Ok(value) => {
-                    let halves = value.split_whitespace().collect::<Vec<&str>>();
-                    println!("P{:#?}", halves);
-                    if halves.len() != 2 || halves.first().unwrap().to_lowercase() != "bearer" {
-                        AuthStatus::Fail(BearerFailure::InvalidToken)
-                    } else {
-                        let token_val = halves.get(1).unwrap();
-                        if jwt::AccessToken::verify(token_val).is_err() {
-                            AuthStatus::Fail(BearerFailure::InvalidToken)
-                        } else {
-                            AuthStatus::Success
-                        }
-                        // verify(token);
-                    }
-                }
-                Err(_) => AuthStatus::Fail(BearerFailure::InvalidToken),
-            }
-        }
-        None => AuthStatus::Fail(BearerFailure::EmptyHeader),
-    }
-}
-
-fn cookie_fetch(req_header: &http::HeaderMap) {}
 
 fn cookie_parse(long_cookie_string: &str) -> Result<Vec<http::Cookie>, String> {
     let mut cookie_vec = Vec::new();
@@ -156,48 +117,100 @@ async fn process_refresh_token(req: HttpRequest) {
 */
 
 //}
-
-fn scan_token(cookies: Vec<http::Cookie>) {
-    let mut state = (0,0);
-    let mut auth_tokens = cookies.iter().filter(|cookie|{
-        match cookie.name() {
-            "AuthTokenPayload" if state.0 != 1 => {
-                state.0 += 1;
-                true
-            },
-            "AuthTokenSigniture" if state.1 !=1 => {
-                state.1 += 1;
-                true
-            },
-            _ => false
+// return auth status but failed only
+fn scan_token(cookies: Vec<http::Cookie>) -> Option<String> {
+    let mut state = (0, 0);
+    //do this to prevent scanning same token multiple times!
+    let auth_tokens = cookies.iter().filter(|cookie| match cookie.name() {
+        "AuthTokenPayload" if state.0 != 1 => {
+            state.0 += 1;
+            true
         }
+        "AuthTokenSigniture" if state.1 != 1 => {
+            state.1 += 1;
+            true
+        }
+        _ => false,
     });
+    // one of token missin!
     let mut p = String::new();
-    let mut scan = || {
-        let mut i = 0;
-        loop {
-            match auth_tokens.next() {
-                Some(token) => {
-                    println!("i {}",i);
-                    if i >= 2 {
-                        break;
-                    }
-                    p.push_str(token.value());
-                    i += 1;
-                }
-                None => break,
-            };
+    let mut t_len = 0;
+    auth_tokens.take(2).for_each(|partial| {
+        t_len += 1;
+        p.push_str(partial.value())
+    });
+    if t_len != 2 {
+        return None;
+    }
+    print!("p : {:#?}", t_len);
+    return Some(p);
+}
+fn auth_process(cookies: Vec<http::Cookie>) {}
+#[cfg(test)]
+mod teser {
+    use super::*;
+    #[test]
+    fn test_scan() {
+        let ap = http::Cookie::new("AuthTokenSigniture", "didi");
+        let ca = http::Cookie::new("AuthTokenPayload", "69");
+        let api = http::Cookie::new("AlsuthTokenSigniture", "322");
+        let ca2 = http::Cookie::new("AuthTokenPayload", "69");
+
+        let test_cookies = vec![ap, ca, api, ca2];
+        // should only scan the for 2 cookies
+        match scan_token(test_cookies) {
+            Some(v) => assert_eq!(v, "didi69".to_string()),
+            None => panic!(),
         }
-    };
-    scan();
-    println!("token {}", p);
+    }
 }
 
-#[test]
-fn test_scan() {
-    let ap = http::Cookie::new("AuthTokenSigniture", "didi");
-    let ca  = http::Cookie::new("AuthTokenPayload", "69");
-    let api = http::Cookie::new("AuthTokenSigniture", "322");
-    let test_cookies = vec![ap,api,ca];
-    scan_token(test_cookies);
+fn process_auth_header(req: &ServiceRequest) -> AuthStatus {
+    // predefined error state!
+    let invalid_tk = AuthStatus::Fail(BearerFailure::InvalidToken);
+    let parsing_err = AuthStatus::Fail(BearerFailure::ParsingError);
+
+    let mut csrf_captured= String::new();
+    let auth_val = req.headers().get("csrf");
+    match auth_val {
+        Some(header_val) => match header_val.to_str() {
+            Ok(value) => csrf_captured.push_str(value),
+            Err(_) => return invalid_tk
+        },
+        None => return AuthStatus::Fail(BearerFailure::EmptyHeader),
+    }
+    
+    // authorization process!
+    match req.headers().get("cookie") {
+        Some(head_val) => match head_val.to_str() {
+            Ok(long_cookie_string) => match cookie_parse(long_cookie_string) {
+                Ok(cookies) => {
+                    //
+                    if let Some(token_str) = scan_token(cookies){
+                        let asm = jwt::AccessToken::verify::<utility::CsrfGuard>(token_str.as_str());
+                        if let Err(_) = asm{
+                            return parsing_err;
+                        }
+                        // check the extension
+                        let ext = asm.unwrap().claims.extension;
+                        if ext.is_none() {
+                            return invalid_tk;
+                        }
+                        if ext.unwrap().token() == csrf_captured {
+                            AuthStatus::Success
+                        }else{
+                            return invalid_tk;
+                        }
+                    }
+                    else{
+                        return parsing_err;
+                    }
+                    // stop right there
+                }
+                Err(_) => return parsing_err,
+            }
+            Err(_) => return parsing_err
+        },
+        None => return AuthStatus::Fail(BearerFailure::EmptyCookie)
+    }
 }

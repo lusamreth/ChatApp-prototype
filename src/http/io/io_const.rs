@@ -28,3 +28,5 @@ pub const AUTH_ERROR: &'static str = "/authorization_err";
 pub const EMPTY_HEADER: &'static str = "/EmptyHead";
 pub const INVALIDTOKEN: &'static str = "/InvalidToken";
 pub const EXPIRED_TOKEN: &'static str = "/ExpiredToken";
+pub const EMPTY_COOKIE: &'static str = "/empty_cookie";
+pub const PARSING_FAIL: &'static str = "/parsing_fail";

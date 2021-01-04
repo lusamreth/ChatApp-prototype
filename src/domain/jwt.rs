@@ -1,7 +1,7 @@
 use super::utility;
 use jsonwebtoken::*;
 use lazy_static::lazy_static;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 pub type JwtRes<T> = Result<TokenData<TokenClaim<T>>, String>;
 // store user_id,username,date
@@ -16,7 +16,7 @@ pub struct TokenClaim<T> {
     iat: usize,
     scope: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    extension: Option<T>,
+    pub extension: Option<T>,
 }
 
 // use to invalidate the access_token
@@ -25,6 +25,7 @@ pub struct TokenVersion {
     #[serde(default)]
     token_version: usize,
 }
+
 impl<T> TokenClaim<T> {
     fn create_scope(input: Vec<&str>) -> String {
         let mut scope = String::new();
@@ -38,7 +39,6 @@ impl<T> TokenClaim<T> {
         });
         return scope;
     }
-
     // create token claim for access_token
     fn access_token(client_id: String, input_scope: Vec<&str>) -> Self {
         let iat = utility::timestamp_now().as_secs() as usize;
@@ -75,9 +75,10 @@ impl<T> TokenClaim<T> {
         }
     }
 
-    fn add_extension(&mut self, ext: T) {
+    pub fn add_extension(&mut self, ext: T) {
         self.extension = Some(ext);
     }
+
 }
 
 lazy_static! {
@@ -92,14 +93,20 @@ lazy_static! {
 
 use uuid::Uuid;
 // 15 mins = 15 * 60 = 900s
-pub struct AccessToken;
+pub struct AccessToken
+;
 impl AccessToken {
-    pub fn create_access_token(clid: Uuid, scope: Vec<&str>) -> String {
-        let mut header = Header::new(Algorithm::HS384);
+    pub fn create_access_token<Ext>(clid: Uuid, scope: Vec<&str>) -> String
+    where
+        Ext: DeserializeOwned + Serialize,
+    {
+        let header = Header::new(Algorithm::HS384);
+
         let id = Uuid::to_string(&clid);
-        let newtoken = TokenClaim::<String>::access_token(id, scope);
-        //let read_key = include_bytes!("../../access_token/private_key.pem");
+        let mut newtoken = TokenClaim::<Ext>::access_token(id, scope);
+
         jsonwebtoken::EncodingKey::from_rsa_pem(&AKEY).expect("failed to encodekey");
+
         // creating key
         let read_key = include_bytes!("../../access_token/private_key.pem");
         let key = jsonwebtoken::EncodingKey::from_rsa_pem(read_key).expect("failed to encodekey");
@@ -107,11 +114,18 @@ impl AccessToken {
         encode(&header, &newtoken, &key).expect("Cannot encode jwt")
     }
 
-    pub fn verify(token: &str) -> JwtRes<String> {
+    pub fn is_expire(&self){
+        
+    }
+    pub fn verify<Ext>(token: &str) -> JwtRes<Ext>
+    where
+        Ext: DeserializeOwned + Serialize,
+    {
         let validation = Validation::new(Algorithm::HS384);
         let dk = DecodingKey::from_rsa_pem(&PUB_AKEY).expect("Cannot unwrap token's key");
         // String extension is just placeholder!!
-        match jsonwebtoken::decode::<TokenClaim<String>>(token, &dk, &validation) {
+
+        match jsonwebtoken::decode::<TokenClaim<Ext>>(token, &dk, &validation) {
             Ok(token) => Ok(token),
             Err(token_err) => Err(token_err.to_string()),
         }
@@ -129,6 +143,7 @@ impl RefreshToken {
         // creating key
         let read_key = include_bytes!("../../refresh_token/private_key.pem");
         let key = EncodingKey::from_rsa_pem(read_key).expect("Failed to encodekey");
+
         encode(&header, &newtoken, &key).expect("Cannot encode jwt")
     }
 
@@ -136,10 +151,19 @@ impl RefreshToken {
         let validation = Validation::new(Algorithm::HS384);
         let dk = DecodingKey::from_rsa_pem(&PUB_RKEY).expect("Cannot unwrap token's key");
         // String extension is just placeholder!!
+
         let token_res = jsonwebtoken::decode::<TokenClaim<TokenVersion>>(token, &dk, &validation);
+
         match token_res {
             Ok(token) => Ok(token),
             Err(token_error) => Err(token_error.to_string()),
         }
     }
+}
+
+#[test]
+fn test_validation(){
+    let val = Validation::new(Algorithm::RS384);
+    println!("{:#?}",val.leeway);
+
 }
