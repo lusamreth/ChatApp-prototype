@@ -8,7 +8,7 @@ pub type JwtRes<T> = Result<TokenData<TokenClaim<T>>, String>;
 //
 #[derive(Serialize, Deserialize)]
 pub struct TokenClaim<T> {
-    client_id: String,
+    pub client_id: String,
     aud: String,
     sub: String,
     iss: String,
@@ -23,7 +23,7 @@ pub struct TokenClaim<T> {
 #[derive(Serialize, Deserialize)]
 pub struct TokenVersion {
     #[serde(default)]
-    token_version: usize,
+    pub token_version: usize,
 }
 
 impl<T> TokenClaim<T> {
@@ -43,6 +43,8 @@ impl<T> TokenClaim<T> {
     fn access_token(client_id: String, input_scope: Vec<&str>) -> Self {
         let iat = utility::timestamp_now().as_secs() as usize;
         let scope = Self::create_scope(input_scope);
+        let exp = utility::timestamp_now().as_secs() + 60 * 15;
+
         TokenClaim {
             client_id,
             scope,
@@ -50,7 +52,7 @@ impl<T> TokenClaim<T> {
             aud: "/static/chat-client".to_string(),
             iat,
             // 15 mins expiration
-            exp: 60 * 15,
+            exp: exp as usize,
             //sub field- not sure about this one!!
             sub: "randomized!!".to_string(),
             extension: None,
@@ -61,6 +63,7 @@ impl<T> TokenClaim<T> {
     fn refresh_token(client_id: String) -> Self {
         let iat = utility::timestamp_now().as_secs() as usize;
         let scope = Self::create_scope(vec!["Create-Access-token", "Renewal", "Session"]);
+        let exp = utility::timestamp_now().as_secs() + 3600 * 24 * 7;
         TokenClaim {
             client_id,
             scope,
@@ -68,7 +71,7 @@ impl<T> TokenClaim<T> {
             aud: "/static/chat-client".to_string(),
             iat,
             // 7 days expiration
-            exp: 60 * 15,
+            exp: exp as usize,
             //sub field- not sure about this one!!
             sub: "randomized!!".to_string(),
             extension: None,
@@ -78,7 +81,6 @@ impl<T> TokenClaim<T> {
     pub fn add_extension(&mut self, ext: T) {
         self.extension = Some(ext);
     }
-
 }
 
 lazy_static! {
@@ -93,17 +95,16 @@ lazy_static! {
 
 use uuid::Uuid;
 // 15 mins = 15 * 60 = 900s
-pub struct AccessToken
-;
+pub struct AccessToken;
 impl AccessToken {
-    pub fn create_access_token<Ext>(clid: Uuid, scope: Vec<&str>) -> String
+    pub fn create_access_token<Ext>(clid: Uuid, scope: Vec<&str>, ext: Option<Ext>) -> String
     where
         Ext: DeserializeOwned + Serialize,
     {
-        let header = Header::new(Algorithm::HS384);
+        let header = Header::new(Algorithm::RS384);
 
         let id = Uuid::to_string(&clid);
-        let mut newtoken = TokenClaim::<Ext>::access_token(id, scope);
+        let newtoken = TokenClaim::<Ext>::access_token(id, scope);
 
         jsonwebtoken::EncodingKey::from_rsa_pem(&AKEY).expect("failed to encodekey");
 
@@ -114,14 +115,12 @@ impl AccessToken {
         encode(&header, &newtoken, &key).expect("Cannot encode jwt")
     }
 
-    pub fn is_expire(&self){
-        
-    }
     pub fn verify<Ext>(token: &str) -> JwtRes<Ext>
     where
         Ext: DeserializeOwned + Serialize,
     {
-        let validation = Validation::new(Algorithm::HS384);
+        let validation = Validation::new(Algorithm::RS384);
+        println!("v :{:#?} ", validation.validate_exp);
         let dk = DecodingKey::from_rsa_pem(&PUB_AKEY).expect("Cannot unwrap token's key");
         // String extension is just placeholder!!
 
@@ -135,7 +134,7 @@ pub struct RefreshToken;
 
 impl RefreshToken {
     pub fn create_refresh_token(clid: Uuid) -> String {
-        let mut header = Header::new(Algorithm::HS384);
+        let header = Header::new(Algorithm::RS384);
         //let id = Uuid::to_string(&clid);
         let mut newtoken = TokenClaim::<TokenVersion>::refresh_token(clid.to_string());
 
@@ -147,8 +146,8 @@ impl RefreshToken {
         encode(&header, &newtoken, &key).expect("Cannot encode jwt")
     }
 
-    pub fn verify(token: &str, tkv: usize) -> JwtRes<TokenVersion> {
-        let validation = Validation::new(Algorithm::HS384);
+    pub fn verify(token: &str) -> JwtRes<TokenVersion> {
+        let validation = Validation::new(Algorithm::RS384);
         let dk = DecodingKey::from_rsa_pem(&PUB_RKEY).expect("Cannot unwrap token's key");
         // String extension is just placeholder!!
 
@@ -162,8 +161,32 @@ impl RefreshToken {
 }
 
 #[test]
-fn test_validation(){
+fn test_validation() {
     let val = Validation::new(Algorithm::RS384);
-    println!("{:#?}",val.leeway);
+    let csrf = utility::CsrfGuard::new();
+    let ori_id = Uuid::new_v4();
+    let acs = AccessToken::create_access_token::<utility::CsrfGuard>(
+        ori_id.clone(),
+        vec!["read"],
+        Some(csrf),
+    );
 
+    let decoded_id = AccessToken::verify::<utility::CsrfGuard>(&acs.to_string())
+        .unwrap()
+        .claims
+        .client_id;
+    assert_eq!(ori_id, Uuid::parse_str(&decoded_id).unwrap());
+}
+
+// refreshing token process :
+// verify the token
+// -check the existence of user
+// -compare token version
+// regenerate access_token
+//
+
+// state could either represent error / success
+pub trait TokenServer<State> {
+    fn renew_token(&self, clid: &str, token: &str) -> Result<String, State>;
+    fn revoked_token(&self, user_id: &str) -> bool;
 }

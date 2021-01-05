@@ -58,31 +58,36 @@ where
         //let matched = req.headers().contains_key("bearer");
         let auth_stat = process_auth_header(&req);
         let fut = self.service.call(req);
-        if let AuthStatus::Success = auth_stat {
-            //if true {
-            Box::pin(async move {
-                let res = fut.await?;
-                // forward the response
-                Ok(res)
-            })
-        } else {
-            let resp = get_auth_error(auth_stat);
-            let err = ErrResponse::from(resp);
-            Box::pin(async move {
-                let base = HttpResponseBuilder::new(http::StatusCode::UNAUTHORIZED)
-                    .cookie(http::Cookie::new("name", "apsodksadl"))
-                    .json(err);
-                //base.cookie(http::Cookie::new("dom", "0189230zd"));
-                Err(Error::from(base))
-            })
+        match auth_stat {
+            AuthStatus::Success => {
+                Box::pin(async move {
+                    let res = fut.await?;
+                    // forward the response
+                    Ok(res)
+                })
+            }
+            // if the access_token expired renew another one!
+            AuthStatus::Fail(BearerFailure::ExpiredJwt) => {}
+            _ => {
+                let resp = get_auth_error(auth_stat);
+                let err = ErrResponse::from(resp);
+                Box::pin(async move {
+                    let base = HttpResponseBuilder::new(http::StatusCode::UNAUTHORIZED)
+                        .cookie(http::Cookie::new("name", "apsodksadl"))
+                        .json(err);
+                    //base.cookie(http::Cookie::new("dom", "0189230zd"));
+                    Err(Error::from(base))
+                })
+            }
         }
     }
 }
-use std::str::FromStr;
 
+use std::str::FromStr;
 fn cookie_parse(long_cookie_string: &str) -> Result<Vec<http::Cookie>, String> {
     let mut cookie_vec = Vec::new();
     let mut err = None;
+
     long_cookie_string
         .split(";")
         .for_each(|cookie_str| match http::Cookie::from_str(cookie_str) {
@@ -170,26 +175,33 @@ fn process_auth_header(req: &ServiceRequest) -> AuthStatus {
     let invalid_tk = AuthStatus::Fail(BearerFailure::InvalidToken);
     let parsing_err = AuthStatus::Fail(BearerFailure::ParsingError);
 
-    let mut csrf_captured= String::new();
+    let mut csrf_captured = String::new();
     let auth_val = req.headers().get("csrf");
     match auth_val {
         Some(header_val) => match header_val.to_str() {
             Ok(value) => csrf_captured.push_str(value),
-            Err(_) => return invalid_tk
+            Err(_) => return invalid_tk,
         },
         None => return AuthStatus::Fail(BearerFailure::EmptyHeader),
     }
-    
+
     // authorization process!
     match req.headers().get("cookie") {
         Some(head_val) => match head_val.to_str() {
             Ok(long_cookie_string) => match cookie_parse(long_cookie_string) {
                 Ok(cookies) => {
                     //
-                    if let Some(token_str) = scan_token(cookies){
-                        let asm = jwt::AccessToken::verify::<utility::CsrfGuard>(token_str.as_str());
-                        if let Err(_) = asm{
-                            return parsing_err;
+                    if let Some(token_str) = scan_token(cookies) {
+                        let asm =
+                            jwt::AccessToken::verify::<utility::CsrfGuard>(token_str.as_str());
+                        if let Err(err) = asm {
+                            return match err.to_lowercase().as_str() {
+                                "expiredsignature" => AuthStatus::Fail(BearerFailure::ExpiredJwt),
+                                "invalidtoken" | "invalidsignature" | "invalidalgorithm" => {
+                                    AuthStatus::Fail(BearerFailure::BadJwtComponent)
+                                }
+                                _ => invalid_tk,
+                            };
                         }
                         // check the extension
                         let ext = asm.unwrap().claims.extension;
@@ -198,19 +210,56 @@ fn process_auth_header(req: &ServiceRequest) -> AuthStatus {
                         }
                         if ext.unwrap().token() == csrf_captured {
                             AuthStatus::Success
-                        }else{
+                        } else {
                             return invalid_tk;
                         }
-                    }
-                    else{
-                        return parsing_err;
+                    } else {
+                        return invalid_tk;
                     }
                     // stop right there
                 }
                 Err(_) => return parsing_err,
-            }
-            Err(_) => return parsing_err
+            },
+            Err(_) => return parsing_err,
         },
-        None => return AuthStatus::Fail(BearerFailure::EmptyCookie)
+        None => return AuthStatus::Fail(BearerFailure::EmptyCookie),
     }
+}
+
+fn scan_refreshtoken(cookies: Vec<http::Cookie>) -> Option<&str> {
+    let cookie = None;
+    cookies.iter().for_each(|c| {
+        if c.name() == "refresh_token" {
+            cookie = Some(c.value());
+            return;
+        }
+    });
+    return cookie;
+}
+
+use actix_web::web;
+fn request_newtoken<E>(req: web::HttpRequest, config: web::ServiceConfig, at: TokenClaim<E>) {
+    // find user from d
+    let mut rtoken = String::new();
+    let auth_stat = match req.headers().get("cookie") {
+        Some(cookie_str) => match cookie_parse(cookie_str.to_str().unwrap_or("")) {
+            Ok(cookies) => match scan_refreshtoken(cookies) {
+                Some(tk) => {
+                    rtoken.push_str(&tk);
+                    AuthStatus::Success
+                }
+                None => AuthStatus::Fail(BearerFailure::EmptyCookie),
+            },
+            Err(cookie_err) => AuthStatus::Fail(BearerFailure::ParsingError),
+        },
+        None => AuthStatus::Fail(BearerFailure::EmptyHeader),
+    };
+
+    if rtoken.len() == 0 {
+        return;
+    }
+
+    let resp = get_auth_error(auth_stat);
+    let err = ErrResponse::from(resp);
+    at.client_id;
 }

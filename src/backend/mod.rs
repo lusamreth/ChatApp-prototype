@@ -6,10 +6,14 @@ pub mod auth;
 mod handlers;
 pub use super::domain::ClientMessage;
 use super::domain::{Client, Payload, Room, User};
+use std::str::FromStr;
 use std::sync::*;
+use std::time::Duration;
+
 type Clients = Arc<RwLock<HashMap<Uuid, Client>>>;
 type Rooms = Arc<RwLock<HashMap<Uuid, Room>>>;
 type Users = Arc<RwLock<HashMap<Uuid, User>>>;
+
 // way of storing messages
 // Room : store hasmap of msgs
 // [client_id : "message"] // hashmap
@@ -238,6 +242,16 @@ impl Server {
         result
     }
 
+    pub fn find_user(&self, id: &str) -> Option<&User> {
+        match Uuid::from_str(id) {
+            Ok(uid) => match self.users.read() {
+                Ok(handle) => handle.get(&uid),
+                Err(_) => None,
+            },
+            Err(_) => None,
+        }
+    }
+
     pub fn handle_login(&self, pwd: String, username: String) -> LoginRes {
         let mut read_err = false;
         let mut passed: (bool, Option<Uuid>) = (false, None);
@@ -336,8 +350,6 @@ impl Handler<LoginMessage> for Server {
     }
 }
 
-use std::time::Duration;
-
 #[derive(Copy, Clone, Message)]
 #[rtype(result = "()")]
 pub struct PingState(pub usize);
@@ -352,6 +364,55 @@ impl Handler<PingState> for Server {
             ctx.run_interval(Duration::new(200, 0), move |_, ctx| {
                 ctx.address().do_send(msg);
             });
+        }
+    }
+}
+const DEFAULT_SCOPE: [&'static str; 3] = ["read", "write", "user"];
+
+impl jwt::TokenServer<AuthStatus> for Server {
+    fn renew_token(&self, clid: &str, token: &str) -> Result<String, AuthStatus> {
+        let invalid_tk = Err(AuthStatus::Fail(BearerFailure::InvalidToken));
+
+        match jwt::RefreshToken::verify(token) {
+            Ok(token) => {
+                match token.claims.extension {
+                    Some(version) => {
+                        let user = self.find_user(clid);
+
+                        if user.is_none() {
+                            return Err(AuthStatus::Fail(BearerFailure::InvalidToken));
+                        } else {
+
+                            if version.token_version == user.unwrap().token_version {
+                                // we know all the id need to be valid uuid
+                                let uid = Uuid::from_str(clid).unwrap();
+                                let scope = DEFAULT_SCOPE.into_iter().map(|s| *s).collect();
+                                // create new token
+                                Ok(jwt::AccessToken::create_access_token::<utility::CsrfGuard>(
+                                    uid,
+                                    scope,
+                                    Some(utility::CsrfGuard::new()),
+                                ))
+                            } else {
+                                invalid_tk
+                            }
+
+                        }
+                    }
+                    None => invalid_tk,
+                }
+            }
+            Err(_) => invalid_tk,
+        }
+    }
+
+    fn revoked_token(&self, user_id: &str) -> bool {
+        match self.find_user(user_id){
+            Some(user) => {
+                user.token_version += 1;
+                true
+            }
+            None => false
         }
     }
 }

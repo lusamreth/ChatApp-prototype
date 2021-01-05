@@ -301,7 +301,8 @@ pub fn get_auth_error(stat: AuthStatus) -> AuthorizationError {
                 BearerFailure::EmptyCookie => EMPTY_HEADER.to_string(),
                 BearerFailure::ExpiredJwt => EXPIRED_TOKEN.to_string(),
                 BearerFailure::InvalidToken => INVALIDTOKEN.to_string(),
-                BearerFailure::ParsingError => PARSING_FAIL.to_string()
+                BearerFailure::BadJwtComponent => BADJWT.to_string(),
+                BearerFailure::ParsingError => PARSING_FAIL.to_string(),
             };
             AuthorizationError { status, reason }
         }

@@ -39,7 +39,7 @@ pub struct User {
     pub uid: Uuid,
     pub username: String,
     created_at: Duration,
-    token_version: usize,
+    pub token_version: usize,
     // contain hash
     pwd: String,
 }
@@ -335,8 +335,10 @@ pub enum BearerFailure {
     ExpiredJwt,
     #[display(fmt = "Missing authorizing cookie!")]
     EmptyCookie,
-    #[display(fmt = "Error while parsing the cookie!")]
+    #[display(fmt = "Error while parsing the jwt cookie!")]
     ParsingError,
+    #[display(fmt = "Jwt token contains irregular components!")]
+    BadJwtComponent,
 }
 pub enum AuthStatus {
     Success,
