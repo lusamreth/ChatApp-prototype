@@ -308,6 +308,13 @@ pub fn get_auth_error(stat: AuthStatus) -> AuthorizationError {
         }
     }
 }
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GeneralError {
     pub error: String,

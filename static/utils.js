@@ -31,6 +31,13 @@ class Socket{
 
 const url = "ws://127.0.0.1:8030/ws";
 const ws = new Socket(url).init_socket();
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+const http_url = "127.0.0.1:8030/api/v1"
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 //const ws = new WebSocket(url);
 
 function detect_err(payload){
@@ -105,3 +112,10 @@ function recur_push(item,array){
    array.push(item) ;
    recur_push(item,array);
 }
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)

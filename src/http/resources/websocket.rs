@@ -40,7 +40,18 @@ pub async fn chat_route(
                 Uuid::parse_str(MAIN).expect("bad id"),
                 uid.unwrap(),
             );
+<<<<<<< HEAD
             ws::start(newpipe, &req, stream)
+=======
+<<<<<<< HEAD
+            ws::start(newpipe, &req, stream)
+=======
+            let a = req.headers().get("sec-websocket-protocol");
+            
+            let prot = ["token"];
+            ws::start_with_protocols(newpipe,&prot,&req, stream)
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
         }
     }
 }

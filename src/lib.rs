@@ -32,7 +32,15 @@ pub mod testing_tools {
             App::new()
                 .data(addrs.clone())
                 .route("/", web::to(http::resources::websocket::chat_route))
+<<<<<<< HEAD
                 .route("/reg", web::to(http::resources::auth_routes::register))
+=======
+<<<<<<< HEAD
+                .route("/reg", web::to(http::resources::auth_routes::register))
+=======
+                .route("/reg", web::to(http::resources::auth_routes::register_user))
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
         });
         return srv;
     }

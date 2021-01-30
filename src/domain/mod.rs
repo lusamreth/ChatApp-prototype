@@ -305,6 +305,10 @@ pub enum JoinOutput {
     Rejected(RoomRejection),
     Failed(FailureReason),
 }
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> d41459f (Improving authentication logic!)
 pub enum LoginFailure {
     Internal(FailureReason),
     UserFailure,
@@ -320,6 +324,14 @@ pub struct LoginRes {
 
 #[derive(Clone, Message)]
 #[rtype(result = "LoginRes")]
+<<<<<<< HEAD
+=======
+=======
+
+#[derive(Clone, Message)]
+#[rtype(result = "Option<Uuid>")]
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 pub struct LoginMessage {
     pub username: String,
     pub password: String,
@@ -340,6 +352,14 @@ pub enum BearerFailure {
     #[display(fmt = "Jwt token contains irregular components!")]
     BadJwtComponent,
 }
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+
+#[derive(Debug, Display)]
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 pub enum AuthStatus {
     Success,
     Fail(BearerFailure),
@@ -349,3 +369,15 @@ pub struct AuthorizationError {
     pub status: String,
     pub reason: String,
 }
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+
+pub struct Rtoken(pub String, pub String);
+
+impl Message for Rtoken {
+    type Result = Result<String, AuthStatus>;
+}
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)

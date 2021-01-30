@@ -9,6 +9,13 @@ use super::domain::{Client, Payload, Room, User};
 use std::str::FromStr;
 use std::sync::*;
 use std::time::Duration;
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+pub mod utils;
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 
 type Clients = Arc<RwLock<HashMap<Uuid, Client>>>;
 type Rooms = Arc<RwLock<HashMap<Uuid, Room>>>;
@@ -242,16 +249,43 @@ impl Server {
         result
     }
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> d41459f (Improving authentication logic!)
     pub fn find_user(&self, id: &str) -> Option<&User> {
         match Uuid::from_str(id) {
             Ok(uid) => match self.users.read() {
                 Ok(handle) => handle.get(&uid),
+<<<<<<< HEAD
+=======
+=======
+    pub fn find_user(&self, id: &str) -> Option<User> {
+        match Uuid::from_str(id) {
+            Ok(uid) => match self.users.read() {
+                Ok(handle) => handle.get(&uid).map(|u| u.clone()),
+                Err(_) => None,
+            },
+            Err(_) => None,
+        }
+    }
+    // internal tool
+    fn transform_user<R>(&self, id: &str, tfx: impl Fn(&mut User) -> R) -> Option<R> {
+        match Uuid::from_str(id) {
+            Ok(uid) => match self.users.write() {
+                Ok(mut handle) => handle.get_mut(&uid).map(|user| tfx(user)),
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
                 Err(_) => None,
             },
             Err(_) => None,
         }
     }
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> d41459f (Improving authentication logic!)
     pub fn handle_login(&self, pwd: String, username: String) -> LoginRes {
         let mut read_err = false;
         let mut passed: (bool, Option<Uuid>) = (false, None);
@@ -286,6 +320,31 @@ impl Server {
                 cl_id: None,
             };
         }
+<<<<<<< HEAD
+=======
+=======
+    pub fn handle_login(&self, pwd: String, username: String) -> Option<Uuid> {
+        let mut read_err = false;
+        let mut id = None;
+        match self.users.read() {
+            Ok(handle) => handle.iter().for_each(|(uid, user)| {
+                if user.username == username {
+                    if user.comp_pass(&pwd) {
+                        id = Some(user.uid);
+                    }
+                }
+            }),
+            Err(e) => {
+                println!("e : {}", e);
+                read_err = true
+            }
+        };
+        if read_err == true {
+            return None;
+        }
+        return id;
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
     }
 }
 
@@ -367,7 +426,15 @@ impl Handler<PingState> for Server {
         }
     }
 }
+<<<<<<< HEAD
 const DEFAULT_SCOPE: [&'static str; 3] = ["read", "write", "user"];
+=======
+<<<<<<< HEAD
+const DEFAULT_SCOPE: [&'static str; 3] = ["read", "write", "user"];
+=======
+pub const DEFAULT_SCOPE: [&'static str; 3] = ["read", "write", "user"];
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 
 impl jwt::TokenServer<AuthStatus> for Server {
     fn renew_token(&self, clid: &str, token: &str) -> Result<String, AuthStatus> {
@@ -382,7 +449,14 @@ impl jwt::TokenServer<AuthStatus> for Server {
                         if user.is_none() {
                             return Err(AuthStatus::Fail(BearerFailure::InvalidToken));
                         } else {
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD
+
+=======
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
                             if version.token_version == user.unwrap().token_version {
                                 // we know all the id need to be valid uuid
                                 let uid = Uuid::from_str(clid).unwrap();
@@ -396,7 +470,14 @@ impl jwt::TokenServer<AuthStatus> for Server {
                             } else {
                                 invalid_tk
                             }
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD
+
+=======
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
                         }
                     }
                     None => invalid_tk,
@@ -407,6 +488,10 @@ impl jwt::TokenServer<AuthStatus> for Server {
     }
 
     fn revoked_token(&self, user_id: &str) -> bool {
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> d41459f (Improving authentication logic!)
         match self.find_user(user_id){
             Some(user) => {
                 user.token_version += 1;
@@ -416,3 +501,25 @@ impl jwt::TokenServer<AuthStatus> for Server {
         }
     }
 }
+<<<<<<< HEAD
+=======
+=======
+        match self
+            .transform_user(user_id, |user| user.token_version += 1)
+            .as_mut()
+        {
+            Some(user) => true,
+            None => false,
+        }
+    }
+}
+
+use jwt::TokenServer;
+impl Handler<Rtoken> for Server {
+    type Result = MessageResult<Rtoken>;
+    fn handle(&mut self, msg: Rtoken, _: &mut Self::Context) -> Self::Result {
+        MessageResult(self.renew_token(&msg.0, &msg.1))
+    }
+}
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)

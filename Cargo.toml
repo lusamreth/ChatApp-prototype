@@ -1,5 +1,14 @@
+<<<<<<< HEAD
 [package]
 name = "actor_ws"
+=======
+<<<<<<< HEAD
+[package]
+name = "actor_ws"
+=======
+[package] name = "actor_ws"
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 version = "0.1.0"
 authors = ["lusamreth <lusamreth@gmail.com>"]
 edition = "2018"
@@ -17,7 +26,15 @@ actix-rt = "1.1.1"
 actix-web-actors = "3.0.0"
 serde = "1.0.117"
 uuid = {version = "0.8.1", features = ["v4","serde"]}
+<<<<<<< HEAD
 actix-files = "0.4.0"
+=======
+<<<<<<< HEAD
+actix-files = "0.4.0"
+=======
+actix-files = "0.5.0"
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 env_logger = "0.8.1"
 log = "0.4.11"
 derive_more = "0.99.11"
@@ -31,3 +48,11 @@ pbkdf2 = "0.6.0"
 actix-service = "1.0.6"
 jsonwebtoken = "7.2.0"
 lazy_static = "1.4.0"
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+time = "0.2.23"
+actix-cors = "0.5.4"
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)

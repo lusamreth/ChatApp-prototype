@@ -104,8 +104,20 @@ impl AccessToken {
         let header = Header::new(Algorithm::RS384);
 
         let id = Uuid::to_string(&clid);
+<<<<<<< HEAD
         let newtoken = TokenClaim::<Ext>::access_token(id, scope);
 
+=======
+<<<<<<< HEAD
+        let newtoken = TokenClaim::<Ext>::access_token(id, scope);
+
+=======
+        let mut newtoken = TokenClaim::<Ext>::access_token(id, scope);
+        if ext.is_some() {
+            newtoken.add_extension(ext.unwrap());
+        }
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
         jsonwebtoken::EncodingKey::from_rsa_pem(&AKEY).expect("failed to encodekey");
 
         // creating key

@@ -42,7 +42,15 @@
     </div>
    <p class="toggle-class" id="toggle-page"></p>
 </body>
+<<<<<<< HEAD
 <script src = "utils.js"></script>
+=======
+<<<<<<< HEAD
+<script src = "utils.js"></script>
+=======
+<script src = "dist/app.bundle.js"></script>
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 <script>
 let room_list = document.getElementById("room_list");
 let room_name = "roomname";
@@ -55,7 +63,14 @@ function verify_user(){
     if (localStorage.getItem("user")){
         user = JSON.parse(localStorage.getItem("user"));
         document.getElementById("user").innerHTML = user.name;
+<<<<<<< HEAD
         document.getElementById("user-abv").innerHTML = user.name[0].toUpperCase();
+=======
+<<<<<<< HEAD
+        document.getElementById("user-abv").innerHTML = user.name[0].toUpperCase();
+=======
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
     }else {
         window.alert("please register as a user!")
         window.location = "/static/login.html";

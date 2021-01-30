@@ -2,6 +2,13 @@ use crate::domain::*;
 use crate::http::io::*;
 use actix_service::{Service, Transform};
 // jwt from domian crate
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+use super::utils::{authprocessor, utility::*};
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 use actix_web::{
     dev::{HttpResponseBuilder, ServiceRequest, ServiceResponse},
     http, Error, HttpRequest, HttpResponse,
@@ -56,8 +63,26 @@ where
     fn call(&mut self, req: Self::Request) -> Self::Future {
         // looking for bearer key!
         //let matched = req.headers().contains_key("bearer");
+<<<<<<< HEAD
         let auth_stat = process_auth_header(&req);
         let fut = self.service.call(req);
+=======
+<<<<<<< HEAD
+        let auth_stat = process_auth_header(&req);
+        let fut = self.service.call(req);
+=======
+        println!("dishleh headers :{:#?}", req.headers());
+        println!("Dis leh cookie : {:#?}", req.headers().get("Cookie"));
+        //let auth_stat = authprocessor::process_auth_header(&req.headers());
+        let auth_stat = match req.headers().get("Sec-Websocket-Protocol") {
+            Some(_) => authprocessor::authorize_wshandshake(&req.headers()),
+            None => authprocessor::authorize_http_req(&req.headers())
+        };
+
+        let fut = self.service.call(req);
+        println!(":{:#?}", auth_stat);
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
         match auth_stat {
             AuthStatus::Success => {
                 Box::pin(async move {
@@ -66,16 +91,34 @@ where
                     Ok(res)
                 })
             }
+<<<<<<< HEAD
             // if the access_token expired renew another one!
             AuthStatus::Fail(BearerFailure::ExpiredJwt) => {}
+=======
+<<<<<<< HEAD
+            // if the access_token expired renew another one!
+            AuthStatus::Fail(BearerFailure::ExpiredJwt) => {}
+=======
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
             _ => {
                 let resp = get_auth_error(auth_stat);
                 let err = ErrResponse::from(resp);
                 Box::pin(async move {
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> d41459f (Improving authentication logic!)
                     let base = HttpResponseBuilder::new(http::StatusCode::UNAUTHORIZED)
                         .cookie(http::Cookie::new("name", "apsodksadl"))
                         .json(err);
                     //base.cookie(http::Cookie::new("dom", "0189230zd"));
+<<<<<<< HEAD
+=======
+=======
+                    let base = HttpResponseBuilder::new(http::StatusCode::UNAUTHORIZED).json(err);
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
                     Err(Error::from(base))
                 })
             }
@@ -83,6 +126,10 @@ where
     }
 }
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> d41459f (Improving authentication logic!)
 use std::str::FromStr;
 fn cookie_parse(long_cookie_string: &str) -> Result<Vec<http::Cookie>, String> {
     let mut cookie_vec = Vec::new();
@@ -109,6 +156,11 @@ async fn process_refresh_token(req: HttpRequest) {
     println!("coal");
     //req.head()
 }
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 //impl From<String> for actix_web::Error {}
 // how error looks {
 /* error: "/auth",
@@ -123,6 +175,10 @@ async fn process_refresh_token(req: HttpRequest) {
 
 //}
 // return auth status but failed only
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> d41459f (Improving authentication logic!)
 fn scan_token(cookies: Vec<http::Cookie>) -> Option<String> {
     let mut state = (0, 0);
     //do this to prevent scanning same token multiple times!
@@ -151,6 +207,11 @@ fn scan_token(cookies: Vec<http::Cookie>) -> Option<String> {
     return Some(p);
 }
 fn auth_process(cookies: Vec<http::Cookie>) {}
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
 #[cfg(test)]
 mod teser {
     use super::*;
@@ -169,6 +230,10 @@ mod teser {
         }
     }
 }
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> d41459f (Improving authentication logic!)
 
 fn process_auth_header(req: &ServiceRequest) -> AuthStatus {
     // predefined error state!
@@ -263,3 +328,8 @@ fn request_newtoken<E>(req: web::HttpRequest, config: web::ServiceConfig, at: To
     let err = ErrResponse::from(resp);
     at.client_id;
 }
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 21fb43b (Handshake authentication)
+>>>>>>> d41459f (Improving authentication logic!)
