@@ -1,0 +1,20 @@
+The authentication implementation :
++Avoidance of xss attack : Jwt will be split into 2 parts:
+-signiture : this is the most critical piece of jwt, therefore it should not be access from
+the outsider. I decide to store it in httponly cookie because in case s1 can execute code remotely
+on client, it can still be protected!
+-payload : essential for UI however it's not the most vulnerable since server don't store anything 
+significant in it(for eg ; uid,username,date,etc);Therefore it should be okay to store it in normal cookie
+or even localstorage as long as it is accessible to client.
+// but csrf can still take advantage of it!!
+
+Taking advantage of same origin policy : Since only the javascript on the same
+origin can make custom header, we can use this approach combine with jwt cookie to protect both
+against xss and csrf attacks;
+
+->csrf token will be store inside the jwt claim and then copy into localstorage ;
+Each request require csrf token (header) + two-parts jwt(cookies) in order to verify client's validity; if one
+of the requirement is missing, the request will be rejected;
+
+ref : https://povioremote.com/blog/handling-authentication-in-spa-with-jwt-and-cookies/;
+https://stackoverflow.com/questions/27067251/where-to-store-jwt-in-browser-how-to-protect-against-csrf;

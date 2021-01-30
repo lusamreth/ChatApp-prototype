@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="main.css">
+    <title>Document</title>
+</head>
+<body>
+
+   <div class="external-wrapper" id="first-page">
+       <h1 class="label first-label">Or choose the existing chatroom!</h1>
+       <div class="wrapper">
+        <div class="header-class" id="room-header">
+         <div class="desc">
+            <h1>Roomlists:</h1>
+            <p>Public lobby : </p>
+         </div>
+         <input type="text" id="search-input" placeholder="search rooms">
+        </div>
+
+        <div id="room_list" class="roomlist"></div>
+        <p id="error-panel"></p>
+
+       </div>
+   </div>
+    <div class="external-wrapper" id="second-page">
+        <div class="profile">
+           <div class="circle-wrapper">
+            <div class="circle"><p id="user-abv"></p></div>
+           </div>
+           <p id="user"></p>
+        </div>
+       <div class="create_room" id="create-room-panel">
+           <h1 class="label">Create your own private room chat!</h1>
+           <p id="input-error"></p>
+           <input type="text" placeholder="room-name" id="roomname">
+           <button id="submitroom" class="hover-button">
+            <p class="inner-text">Submit</p> 
+           </button>
+       </div>
+    </div>
+   <p class="toggle-class" id="toggle-page"></p>
+</body>
+<script src = "utils.js"></script>
+<script src = "dist/app.bundle.js"></script>
+<script>
+let room_list = document.getElementById("room_list");
+let room_name = "roomname";
+let user;
+
+function verify_user(){
+    let p = localStorage.getItem("user");
+    console.log("p");
+    console.log(p['user_id']);
+    if (localStorage.getItem("user")){
+        user = JSON.parse(localStorage.getItem("user"));
+        document.getElementById("user").innerHTML = user.name;
+    }else {
+        window.alert("please register as a user!")
+        window.location = "/static/login.html";
+    }
+}
+
+// check if the user already existed in localStorage
+verify_user();
+
+function fetch_room(amount){
+    ws.send("rooms");
+    let  i = 0;
+    room_list.innerHTML = "";
+    ws.onmessage = (payload) => {
+        let payload_json = JSON.parse(payload.data);
+        console.dir(payload.data);
+        if (detect_err(payload_json)) {
+            let err_payload = JSON.parse(payload.data);
+            console.log("sub_type");
+            console.log(err_payload.sub_type);
+            if (err_payload.sub_type.toLowerCase() === "/existinguser"){
+                console.log("user is already joined!")
+            }
+            return;
+        }
+
+        const {id,room_name,participants,capacity} = payload_json;
+        i++;
+        if (i <= amount) {
+            room_list.innerHTML += `<li class="room-${i} room" id="room_item">${room_name} 
+                <div class="room-info"
+                    <p>members :
+                    ${participants}/${capacity} 
+                    <button class="joinroom hover-button" id="join_room-${i}]" data-roomid="${id}">
+                        <p class="inner-text"'>join</p></button> 
+                    </p>
+                </div>
+            </li>`;
+        }else {
+            console.log("done");
+        }
+    }
+}
+
+let input_err = document.getElementById("input-error");
+// toggle state for navigationaddEventListener
+// state : 0 -> first page visible
+// state : 1 -> second page visible
+// [-1,-2,-3,-4,-5,....]; the lesser the value
+// the further the page get!
+
+class PopBack{
+    constructor(dom){
+        this.element = {
+            dom,
+            toggle_state:false
+        };
+    }
+    
+    toggle_page(){
+        this.element.toggle_state = !this.element.toggle_state;
+        if (this.element.toggle_state === true) {
+            this.close_page();
+        }else {
+            this.open_page();
+        }
+    }
+
+    close_page(){
+        let first_page = this.element.dom;
+        first_page.classList.add("invisible");
+        this.toggle_header();
+
+    }
+
+    open_page(){
+        let first_page = this.element.dom;
+        first_page.classList.remove("invisible");
+        setTimeout(() => {
+            this.toggle_header();
+        },110)
+        //this.toggle_header();
+    }
+
+    toggle_header(){
+       remove_header(this.element.toggle_state);
+    }
+}
+
+function remove_header(state){
+    let header_class = document.getElementById("room-header").classList;
+    if (state){
+        header_class.add("empty-display");
+    }else{
+        header_class.remove("empty-display");
+    }
+}
+let to_lobby = "lobby &gt";
+let to_create_room = "create room";
+let first_page = document.getElementById("first-page");
+let tp = document.getElementById("toggle-page");
+// main page navigation 
+let main_pg_nav = new PopBack(first_page);
+tp.innerHTML = to_create_room;
+tp.addEventListener("click",(e) => {
+    // first page
+    if (main_pg_nav.element.toggle_state === true){
+        tp.innerHTML = to_create_room;
+    }else{
+        tp.innerHTML = to_lobby;
+    }
+    main_pg_nav.toggle_page();
+});
+
+
+function init_joinbutton(){
+    // self notify function
+    
+    let reset_time = 0;
+        reset_time += 1;
+    try {
+        let join_buttons = document.getElementsByClassName("joinroom");
+        if (join_buttons.length === 0){
+            setTimeout(() => {
+               init_joinbutton();
+            },100)
+        }else{
+            for(let i=0;i<join_buttons.length;i++){
+            let roomid = join_buttons[i].dataset.roomid;
+            console.log(roomid);
+            let req_queue = [
+                `join:join_room/${roomid}`,
+                `signal:connect/${roomid}`
+            ];
+
+            join_buttons[i].addEventListener("click", (e) => {
+
+                    e.preventDefault();
+                    console.log("working!");
+
+                    let results = [];
+                    if (Error === cont_req(req_queue,results)) {
+                        console.log("this res");
+                    };
+                    console.log(results);
+                });
+            }
+
+        }
+    }catch(e) {
+        if(reset_time > 5){
+            update_error("Cannot init buttons!")
+            return;
+        }
+        console.log(e);
+        console.log(reset_time);
+
+    }
+
+}
+
+let max = 100;
+function create_room_req(req,name){
+    if (name.trim() == ""){
+       input_err.innerHTML = "Please Enter the room name!";
+        return;asd
+    }else {
+       input_err.innerHTML = "" ;
+    }
+    ws.send(`${req}${name}`);
+    ws.onmessage = (payload) => {
+        console.log(payload);
+        let payload_json = JSON.parse(payload.data);
+        // see if any error
+        if (detect_err(payload_json)) {
+            let err_subtype = payload_json.sub_type.toLowerCase();
+            if (err_subtype === "/unknownuser") {
+                window.location = "/static/login.html";
+            }
+            update_error(payload_json.error);
+        }else {
+            let {user_id,creation_date} = payload_json;
+            fetch_room(max);
+            main_pg_nav.toggle_page();
+            return payload_json;
+        }
+    }
+}
+
+function waitsocket(socket,callback){
+    // incase the socket has not been open
+    setTimeout(() => {
+        if(socket.readyState === 1){
+            if (callback !== null){
+                callback();
+            }
+        }else{
+            // rewait for the socket!
+            waitsocket(socket,callback);
+        }
+    },5);
+}
+
+ws.onopen = () => {
+    fetch_room(max);
+    console.log("items");
+    init_joinbutton();
+}
+const extract_input = () => {
+    return document.getElementById("search-input").value;
+};
+function search_room(){
+    let i = 0;
+    document.getElementById("search-input").addEventListener("keyup",(e) => {
+        e.preventDefault();
+        console.log(extract_input());
+        console.log(room_list.children);
+        let ele = room_list.children;
+        for(let i=0;i< ele.length;i++){
+            let item = room_list.children[i];
+            if (item.textContent === extract_input()){
+                console.log(item);
+            }
+        }
+    });
+}
+search_room();
+
+function room_btn() {
+    let make_room_btn = built_ws_btn("submitroom",create_room_req);
+    return make_room_btn(`room:create_room/`,"roomname");
+}
+
+try {
+    room_btn();
+}catch(e) {
+    console.log(e);
+    update_error(e);
+   // e != null ? update_error(e) : null
+}
+function reveal_join(){
+    let rooms = room_list.children;
+    for(let i =0;i++;i < rooms.length) {
+        let room = rooms.item(i);
+        console.log("room : " + room);
+    }
+}
+let mega_test = (num) => {
+    for(let i=0;i<num;i++) {
+        ws.send("room:create_room/abababab");
+        ws.onmessage = (e) => {
+            console.log("recieved!");
+        }
+        //ws.onopen = () => {
+        //}
+    }
+};
+    // background-image:url("./static/Asuka.jpg");
+</script>
+
+<style>
+* {
+  scrollbar-width: thin;
+  scrollbar-color: blue white;
+}
+*::-webkit-scrollbar {
+  width: 5px;
+  margin-left:50px;
+}
+*::-webkit-scrollbar-track {
+  background: orange;
+  border-radius:1rem;
+  width:0;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #333;
+  border-radius: 20px;
+}
+
+.profile {
+    display:flex;
+    align-items : center;
+    left : 30px;
+    top : 25px;
+    height:50px;
+    position: absolute;
+    z-index:100; 
+    color : white;
+    /*border : 1px solid white;*/
+}
+.circle-wrapper {
+    padding:10px 16px;
+    position:relative;
+    border-radius : 20%;
+    background-color : red;
+}
+.circle {
+    display:flex;
+    height:100%;
+    align-items:center;
+    justify-content:center;
+    width : 100%;
+}
+.profile #user {
+    margin-left : 10px; 
+    font-size: 1.2em;
+}
+
+#user-abv{
+    font-size : 1.3rem;
+}
+.external-wrapper:first-of-type {
+    position:absolute;
+    background-color : black;
+}
+
+.external-wrapper:nth-child(2){
+    background-color: #225061;
+}
+.external-wrapper{
+    transition: .3s ease-out;
+    background : white;
+    height:100vh;
+    width:100%;
+    display:flex;
+    z-index:2;
+    flex-direction: column;
+    justify-content:center;
+    align-items:center;
+}
+.create_room {
+    box-shadow:5px 5px 5px black;
+    background-color:white;
+    border-radius : 0.8rem;
+    background-color: white;
+    padding:1em;
+    border:1px solid black;
+    margin:15px;
+    max-width :500px;
+    display:flex;
+    width : 90%;
+    flex-direction: column;
+}
+
+#roomname {
+    padding:10px;
+    margin-bottom : 15px;
+}
+.create_room h1{
+    text-align: center;
+}
+.create_room button {
+    width : 50%;
+    margin : 0 auto;
+    padding : 10px;
+}
+.roomlist{
+    padding: 15px;
+    width:100%;
+    z-index:1;
+    margin-top:70px;
+}
+.label{
+    font-size: 1.6rem;
+    padding:10px 15px;
+}
+.first-label {
+    color:white;
+}
+.wrapper {
+    background-color: white;
+    margin:10px 55px;
+    min-height:450px;
+    max-width: 750px;
+    width:90%;
+    position:relative;
+    border-radius:.7rem;
+    border:1px solid black;
+    /* padding:1em; */
+    max-height: 450px;
+    overflow-y:scroll;
+}
+.header-class{
+    z-index:2;
+    background-color:green;
+    position:fixed;
+    padding:10px;
+    justify-content : space-between;
+    display:flex;
+    align-items:center;
+    width:90%;
+    transition:1.2s all;
+    height:75px;
+    max-width:745px;
+    line-height: 1.2;
+}
+.header-class.desc{
+    color:white;
+    width:100%;
+}
+.header-class h1{
+    font-size:1.4rem;
+}
+.header-class input {
+    margin-top:10px;
+    padding:10px;
+    max-width:400px;
+    width:100%;
+    border-radius:5px;
+}
+.room {
+    border: 1px solid black;
+    padding:0 5px;
+    display:flex;
+    z-index:1;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: row;
+}
+.room-info{
+    z-index:1;
+}
+@keyframes slidein {
+  from {
+    margin-left: 100%;
+    width: 300%; 
+  }
+
+  to {
+    margin-left: 0%;
+    width: 100%;
+  }
+}
+/* room-join button */
+.joinroom {
+    margin:5px;
+    outline : none;
+}
+button {
+    outline:none;
+    color:white;
+    z-index:5;
+    border-radius: 10rem;
+    border:none;
+    padding: 8px 15px;
+    position: relative;
+}
+.room-info{
+    display:flex;
+}
+#input-error,panel-error {
+    color:red;
+}
+#input-error {
+    margin-bottom: 5px;
+}
+.toggle-class::before{
+   content:"";
+   height:2px;
+   background-color:white;
+   width:0;
+   bottom:0;
+   transition: .5s all;
+   position:absolute;
+}
+.toggle-class:hover::before {
+    width:100%;
+}
+.toggle-class{
+    font-size:1.4rem;
+    position:absolute;
+    color : white;
+    bottom : 0;
+    z-index:2;   
+    right : 0;
+    margin : 25px;
+}
+.invisible{
+    /* display:none; */
+    width:0;
+    overflow:hidden;
+    position:absolute;
+    border-bottom-left-radius: 20rem;
+    border-top-right-radius: 20rem;
+    border-bottom-right-radius: 10rem;
+    height:0;
+    will-change:height;
+}
+.empty-display{
+    display:none;
+}
+</style>
+</html>
